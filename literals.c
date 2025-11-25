@@ -1,39 +1,56 @@
 #include "lexer.h"
 
-void validStringLiteral(FILE *fp , char buffer[],char ch){
-
+void validStringLiteral(FILE *fp , char buffer[], char ch) {
     int index = 0;
+    int terminated = 0; // flag to check if string closed properly
 
     buffer[index++] = ch;  // Store opening quote
     currentCol++;
 
-    while((ch = fgetc(fp)) != EOF && ch != '\"'){
+    while ((ch = fgetc(fp)) != EOF) {
         if (ch == '\n') {
             // Unterminated string literal at newline -> report error
             fprintf(stderr, "Lexical Error at line %d, column %d: Unterminated string literal\n", currentLine, currentCol);
             currentLine++;
             currentCol = 1;
+
+            // Skip remaining characters until next quote or newline
+            while (ch != EOF && ch != '\"' && ch != '\n') {
+                ch = fgetc(fp);
+                currentCol++;
+            }
             break;
         }
 
         if (index >= MAX_LEN - 1) {  // Prevent buffer overflow
             fprintf(stderr, "Lexical Error: String literal too long at line %d, column %d\n", currentLine, currentCol);
+
+            // Skip remaining characters until closing quote or newline
+            while (ch != EOF && ch != '\"' && ch != '\n') {
+                ch = fgetc(fp);
+                currentCol++;
+            }
             break;
         }
 
         buffer[index++] = ch;
-        currentCol++;
-    }
 
-    if(ch == '\"'){  // Closing quote found
-        buffer[index++] = ch;
+        if (ch == '\"') { // closing quote found
+            terminated = 1;
+            currentCol++;
+            break;
+        }
+
         currentCol++;
     }
 
     buffer[index] = '\0';
 
-    printf("String Literal : %s\n", buffer); // Print token
-    memset(buffer, 0, index);               // Clear buffer
+    if (terminated) {
+        printf("String Literal : %s\n", buffer);
+    }
+
+    memset(buffer, 0, index);  // Clear buffer
 }
 
 
